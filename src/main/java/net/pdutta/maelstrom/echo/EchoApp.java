@@ -1,108 +1,129 @@
 package net.pdutta.maelstrom.echo;
 
-import java.util.Locale;
+import com.google.gson.internal.LinkedTreeMap;
+
 import java.util.Map;
 import java.util.Scanner;
-
-import static java.util.Map.entry;
 
 public class EchoApp {
     public void loopOverStdin() {
         Scanner input = new Scanner(System.in);
         while (input.hasNext()) {
             String json = input.nextLine().trim();
-            String messageType = getMessageType(json);
-            switch (messageType.toLowerCase(Locale.ROOT)) {
-                case "init" -> respondToInit(json);
-                case "echo" -> respondToEcho(json);
-                default -> System.out.println("Error: Unknown message type: " + messageType);
+            var parseResult = parseMessage(json);
+            switch (parseResult.messageType()) {
+                case "init" -> respondToInit(parseResult.map());
+                case "echo" -> respondToEcho(parseResult.map());
+                default -> logError("Error: Unknown message type: " + parseResult.messageType());
             }
         }
     }
 
-    private void respondToInit(String json) {
-        var result = parse(json, Map.ofEntries(
-                entry("node_id", "$.body.node_id"),
-                entry("msg_id", "$.body.msg_id"),
-                entry("src", "$.src")
-        ));
-        String nodeId = (String) result.get("node_id");
-        if (nodeId.equals("")) {
-            System.out.println("Error: could not fetch node_id");
-            return;
-        }
+    private void respondToInit(Map<String, Object> parsed) {
+        String nodeId = (String) ((LinkedTreeMap<?, ?>) parsed.get("body")).get("node_id");
+        // JSON numbers are stored as Doubles
+        Double msgId = (Double) ((LinkedTreeMap<?, ?>) parsed.get("body")).get("msg_id");
+        String src = (String) parsed.get("src");
+
         this.nodeId = nodeId;
 
-        String responseTemplate = """
-                {
-                    "src": "",
-                    "dest": "",
-                    "body": {
-                        "msg_id": 0,
-                        "in_reply_to": 0,
-                        "type": "init_ok"
-                    }
-                }""";
-        var response = create(responseTemplate, Map.ofEntries(
-                entry("$.src", this.nodeId),
-                entry("$.dest", result.get("src")),
-                entry("$.body.in_reply_to", result.get("msg_id")),
-                entry("$.body.msg_id", ++this.nextMessageId)
-        ));
-        System.out.println(response.replaceAll("[\\r\\n]", ""));
+        final var response = new EchoInitResponse();
+        response.src = this.nodeId;
+        response.dest = src;
+        response.body.in_reply_to = msgId.intValue();
+        response.body.type = "init_ok";
+        response.body.msg_id = ++this.nextMessageId;
+
+        String json = jsonUtil.createJson(response);
+        logOutput(json.replaceAll("[\\r\\n]", ""));
+    }
+
+    private void respondToEcho(Map<String, Object> parsed) {
+        String echoMsg = (String) ((LinkedTreeMap<?, ?>) parsed.get("body")).get("echo");
+        Double msgId = (Double) ((LinkedTreeMap<?, ?>) parsed.get("body")).get("msg_id");
+        String src = (String) parsed.get("src");
+
+        final var response = new EchoResponse();
+        response.src = this.nodeId;
+        response.dest = src;
+        response.body.echo = echoMsg;
+        response.body.in_reply_to = msgId.intValue();
+        response.body.type = "echo_ok";
+        response.body.msg_id = ++this.nextMessageId;
+
+        String json = jsonUtil.createJson(response);
+        logOutput(json.replaceAll("[\\r\\n]", ""));
+    }
+
+    private ParseResult parseMessage(String json) {
+        Map<String, Object> parsed = null;
+        String msgtype = null;
+        try {
+            parsed = jsonUtil.parseToMap(json);
+            msgtype = (String) ((LinkedTreeMap<?, ?>) parsed.get("body")).get("type");
+        } catch (Exception e) {
+            logError("Error parsing message: " + e.getMessage());
+        }
+        return new ParseResult(parsed, msgtype);
+    }
+
+    void logError(String message) {
+        System.err.println(message);
+        System.err.flush();
+    }
+
+    void logOutput(String message) {
+        System.out.println(message);
         System.out.flush();
-    }
-
-    private void respondToEcho(String json) {
-        var result = parse(json, Map.ofEntries(
-                entry("echo_msg", "$.body.echo"),
-                entry("msg_id", "$.body.msg_id"),
-                entry("src", "$.src")
-        ));
-
-        String responseTemplate = """
-                {
-                    "src": "",
-                    "dest": "",
-                    "body": {
-                        "echo": "",
-                        "type": "echo_ok",
-                        "msg_id": 0,
-                        "in_reply_to": 0,
-                    }
-                }""";
-        var response = create(responseTemplate, Map.ofEntries(
-                entry("$.src", this.nodeId),
-                entry("$.dest", result.get("src")),
-                entry("$.body.echo", result.get("echo_msg")),
-                entry("$.body.in_reply_to", result.get("msg_id")),
-                entry("$.body.msg_id", ++this.nextMessageId)
-        ));
-        System.out.println(response.replaceAll("[\\r\\n]", ""));
-        System.out.flush();
-    }
-
-    private String getMessageType(String json) {
-        var result = parse(json, Map.ofEntries(
-                entry("bodytype", "$.body.type")
-        ));
-        return (String) result.get("bodytype");
-    }
-
-    public Map<String, Object> parse(String json, Map<String, String> searchFields) {
-        JsonUtil searcher = new JsonUtil(json);
-        return searcher.find(searchFields);
-    }
-
-    public String create(String jsonTemplate, Map<String, Object> items) {
-        return JsonUtil.create(jsonTemplate, items);
     }
 
     public EchoApp() {
         this.nodeId = null;
         this.nextMessageId = 0;
+        this.jsonUtil = new JsonUtil();
     }
 
     private String nodeId;
     private Integer nextMessageId;
+    private final JsonUtil jsonUtil;
+}
+
+class EchoInitResponse {
+    String src;
+    String dest;
+
+    @SuppressWarnings("InnerClassMayBeStatic")
+    class Body {
+        int msg_id;
+        int in_reply_to;
+        String type;
+    }
+
+    Body body;
+
+    EchoInitResponse() {
+        body = new Body();
+    }
+}
+
+class EchoResponse {
+    String src;
+    String dest;
+
+    @SuppressWarnings("InnerClassMayBeStatic")
+    class Body {
+        int msg_id;
+        int in_reply_to;
+        String type;
+        String echo;
+    }
+
+    Body body;
+
+    EchoResponse() {
+        body = new Body();
+    }
+}
+
+record ParseResult(Map<String, Object> map, String messageType) {
 }
