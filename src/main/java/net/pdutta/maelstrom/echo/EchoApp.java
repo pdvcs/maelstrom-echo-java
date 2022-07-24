@@ -20,10 +20,18 @@ public class EchoApp {
     }
 
     private void respondToInit(Map<String, Object> parsed) {
-        String nodeId = (String) ((LinkedTreeMap<?, ?>) parsed.get("body")).get("node_id");
-        // JSON numbers are stored as Doubles
-        Double msgId = (Double) ((LinkedTreeMap<?, ?>) parsed.get("body")).get("msg_id");
-        String src = (String) parsed.get("src");
+        String nodeId = "";
+        Double msgId = -2.0;
+        String src = "";
+        try {
+            nodeId = (String) ((LinkedTreeMap<?, ?>) parsed.get("body")).get("node_id");
+            // JSON numbers are stored as Doubles
+            msgId = (Double) ((LinkedTreeMap<?, ?>) parsed.get("body")).get("msg_id");
+            src = (String) parsed.get("src");
+        } catch (Exception e) {
+            logError("error picking values from JSON: " + e.getMessage());
+            return;
+        }
 
         this.nodeId = nodeId;
 
@@ -39,9 +47,17 @@ public class EchoApp {
     }
 
     private void respondToEcho(Map<String, Object> parsed) {
-        String echoMsg = (String) ((LinkedTreeMap<?, ?>) parsed.get("body")).get("echo");
-        Double msgId = (Double) ((LinkedTreeMap<?, ?>) parsed.get("body")).get("msg_id");
-        String src = (String) parsed.get("src");
+        String echoMsg = "";
+        Double msgId = -2.0;
+        String src = "";
+        try {
+            echoMsg = (String) ((LinkedTreeMap<?, ?>) parsed.get("body")).get("echo");
+            msgId = (Double) ((LinkedTreeMap<?, ?>) parsed.get("body")).get("msg_id");
+            src = (String) parsed.get("src");
+        } catch (Exception e) {
+            logError("error picking values from JSON: " + e.getMessage());
+            return;
+        }
 
         final var response = new EchoResponse();
         response.src = this.nodeId;
@@ -62,7 +78,7 @@ public class EchoApp {
             parsed = jsonUtil.parseToMap(json);
             msgtype = (String) ((LinkedTreeMap<?, ?>) parsed.get("body")).get("type");
         } catch (Exception e) {
-            logError("Error parsing message: " + e.getMessage());
+            logError("error parsing message: " + e.getMessage());
         }
         return new ParseResult(parsed, msgtype);
     }
