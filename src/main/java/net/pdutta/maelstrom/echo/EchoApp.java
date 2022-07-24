@@ -1,7 +1,5 @@
 package net.pdutta.maelstrom.echo;
 
-import com.google.gson.internal.LinkedTreeMap;
-
 import java.util.Map;
 import java.util.Scanner;
 
@@ -24,9 +22,9 @@ public class EchoApp {
         Double msgId = -2.0;
         String src = "";
         try {
-            nodeId = (String) ((LinkedTreeMap<?, ?>) parsed.get("body")).get("node_id");
+            nodeId = (String) ((Map<?, ?>) parsed.get("body")).get("node_id");
             // JSON numbers are stored as Doubles
-            msgId = (Double) ((LinkedTreeMap<?, ?>) parsed.get("body")).get("msg_id");
+            msgId = (Double) ((Map<?, ?>) parsed.get("body")).get("msg_id");
             src = (String) parsed.get("src");
         } catch (Exception e) {
             logError("error picking values from JSON: " + e.getMessage());
@@ -51,8 +49,8 @@ public class EchoApp {
         Double msgId = -2.0;
         String src = "";
         try {
-            echoMsg = (String) ((LinkedTreeMap<?, ?>) parsed.get("body")).get("echo");
-            msgId = (Double) ((LinkedTreeMap<?, ?>) parsed.get("body")).get("msg_id");
+            echoMsg = (String) ((Map<?, ?>) parsed.get("body")).get("echo");
+            msgId = (Double) ((Map<?, ?>) parsed.get("body")).get("msg_id");
             src = (String) parsed.get("src");
         } catch (Exception e) {
             logError("error picking values from JSON: " + e.getMessage());
@@ -76,7 +74,7 @@ public class EchoApp {
         String msgtype = null;
         try {
             parsed = jsonUtil.parseToMap(json);
-            msgtype = (String) ((LinkedTreeMap<?, ?>) parsed.get("body")).get("type");
+            msgtype = (String) ((Map<?, ?>) parsed.get("body")).get("type");
         } catch (Exception e) {
             logError("error parsing message: " + e.getMessage());
         }
