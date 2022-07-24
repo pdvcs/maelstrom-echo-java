@@ -18,9 +18,9 @@ public class EchoApp {
     }
 
     private void respondToInit(Map<String, Object> parsed) {
-        String nodeId = "";
-        Double msgId = -2.0;
-        String src = "";
+        String nodeId;
+        Double msgId;
+        String src;
         try {
             nodeId = (String) ((Map<?, ?>) parsed.get("body")).get("node_id");
             // JSON numbers are stored as Doubles
@@ -45,9 +45,9 @@ public class EchoApp {
     }
 
     private void respondToEcho(Map<String, Object> parsed) {
-        String echoMsg = "";
-        Double msgId = -2.0;
-        String src = "";
+        String echoMsg;
+        Double msgId;
+        String src;
         try {
             echoMsg = (String) ((Map<?, ?>) parsed.get("body")).get("echo");
             msgId = (Double) ((Map<?, ?>) parsed.get("body")).get("msg_id");
