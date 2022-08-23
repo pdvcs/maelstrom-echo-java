@@ -5,14 +5,15 @@ import java.util.Scanner;
 
 public class EchoApp {
     public void loopOverStdin() {
-        Scanner input = new Scanner(System.in);
-        while (input.hasNext()) {
-            String json = input.nextLine().trim();
-            var parseResult = parseMessage(json);
-            switch (parseResult.messageType()) {
-                case "init" -> respondToInit(parseResult.map());
-                case "echo" -> respondToEcho(parseResult.map());
-                default -> logError("Error: Unknown message type: " + parseResult.messageType());
+        try (Scanner input = new Scanner(System.in)) {
+            while (input.hasNext()) {
+                String json = input.nextLine().trim();
+                var parseResult = parseMessage(json);
+                switch (parseResult.messageType()) {
+                    case "init" -> respondToInit(parseResult.map());
+                    case "echo" -> respondToEcho(parseResult.map());
+                    default -> logError("Error: Unknown message type: " + parseResult.messageType());
+                }
             }
         }
     }
